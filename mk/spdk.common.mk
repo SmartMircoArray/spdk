@@ -45,6 +45,22 @@ OS := $(shell uname)
 
 COMMON_CFLAGS = -g $(C_OPT) -Wall -Werror -fno-strict-aliasing -march=native -m64 -I$(SPDK_ROOT_DIR)/include
 
+COMMON_CFLAGS += -Wformat -Wformat-security -Wformat-nonliteral
+
+# Always build PIC code so that objects can be used in shared libs and position-independent executables
+COMMON_CFLAGS += -fPIC
+
+# Enable stack buffer overflow checking
+COMMON_CFLAGS += -fstack-protector
+
+# Enable full RELRO - no lazy relocation (resolve everything at load time).
+# This allows the GOT to be made read-only early in the loading process.
+LDFLAGS += -Wl,-z,relro,-z,now
+
+# Make the stack non-executable.
+# This is the default in most environments, but it doesn't hurt to set it explicitly.
+LDFLAGS += -Wl,-z,noexecstack
+
 ifeq ($(OS),FreeBSD)
 LIBS += -L/usr/local/lib
 COMMON_CFLAGS += -I/usr/local/include
@@ -54,6 +70,8 @@ ifeq ($(CONFIG_DEBUG), y)
 COMMON_CFLAGS += -DDEBUG -O0
 else
 COMMON_CFLAGS += -DNDEBUG -O2
+# Enable _FORTIFY_SOURCE checks - these only work when optimizations are enabled.
+COMMON_CFLAGS += -D_FORTIFY_SOURCE=2
 endif
 
 CFLAGS   += $(COMMON_CFLAGS) -Wno-pointer-sign -std=gnu11
